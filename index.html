@@ -23,14 +23,20 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-indigo-100 selection:text-indigo-800">
 
-    <!-- HEADER -->
-    <header class="w-full py-6 px-6 border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10">
+    <!-- HEADER & CODE EXPORT BAR -->
+    <header class="w-full py-4 px-6 border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0 z-20">
         <div class="max-w-2xl mx-auto flex items-center justify-between">
-            <h1 class="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
                 <span class="inline-block w-3 h-3 rounded-full bg-indigo-600"></span>
                 AIとの距離感チェック <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-normal">v0.1</span>
             </h1>
-            <span class="text-xs text-slate-500 font-medium">まかろにnote制作AIチーム</span>
+            <div class="flex items-center gap-2">
+                <button onclick="copySourceCode()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    <span id="source-copy-text">コードをコピー</span>
+                </button>
+                <span class="hidden sm:inline text-xs text-slate-400 font-medium">まかろにnote制作AIチーム</span>
+            </div>
         </div>
     </header>
 
@@ -505,7 +511,6 @@
                     </span>
                     <span class="text-xs sm:text-sm">${axis.val}</span>
                 `;
-                // Click or touch to show explanation
                 card.onclick = () => showAxisExpl(axis.name);
                 card.onmouseenter = () => showAxisExpl(axis.name);
                 axesContainer.appendChild(card);
@@ -529,4 +534,77 @@
             }
         }
 
+        // Copy entire HTML source code to clipboard
+        function copySourceCode() {
+            const codeText = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const btnText = document.getElementById('source-copy-text');
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    showSourceCopiedFeedback(btnText);
+                }).catch(() => {
+                    fallbackCopySourceText(codeText, btnText);
+                });
+            } else {
+                fallbackCopySourceText(codeText, btnText);
+            }
+        }
+
         function fallbackCopyText(text, btnTextElement) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopiedFeedback(btnTextElement);
+                } else {
+                    alert('コピーに失敗しました。');
+                }
+            } catch (err) {
+                alert('コピーに失敗しました。');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function fallbackCopySourceText(text, btnTextElement) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showSourceCopiedFeedback(btnTextElement);
+                } else {
+                    alert('コードのコピーに失敗しました。');
+                }
+            } catch (err) {
+                alert('コードのコピーに失敗しました。');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showCopiedFeedback(element) {
+            const originalText = element.innerText;
+            element.innerText = "コピーしました！";
+            setTimeout(() => {
+                element.innerText = originalText;
+            }, 2000);
+        }
+
+        function showSourceCopiedFeedback(element) {
+            const originalText = element.innerText;
+            element.innerText = "全コードコピー完了！";
+            setTimeout(() => {
+                element.innerText = originalText;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
