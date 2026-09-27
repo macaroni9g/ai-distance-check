@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>あなたのAIとの距離感チェック v2.0(試作)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+
+  :root {
+    color-scheme: light;
+    --bg: #f6f5fb;
+    --card: #ffffff;
+    --ink: #241f3d;
+    --sub: #6b6580;
+    --accent: #7c6cf0;
+    --accent-soft: #efeafe;
+    --accent-2: #ff9f6b;
+    --accent-2-soft: #fff1e7;
+    --warn: #b45309;
+    --warn-soft: #fff7ed;
+    --warn-line: #fde8cf;
+    --line: #e9e6f5;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  .fade-in { animation: fadeIn .35s ease-out forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: translateY(0);} }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: 0 10px 30px -18px rgba(76, 60, 160, 0.25);
+  }
+
+  .soft-pill { background: var(--accent-soft); color: var(--accent); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #8b7cf6, #6f5be0);
+    color: #fff;
+    box-shadow: 0 10px 24px -10px rgba(124,108,240,0.6);
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-primary:active { filter: brightness(0.95); }
+
+  .btn-ghost { background: #fff; color: var(--sub); border: 1px solid var(--line); }
+  .btn-ghost:hover { background: var(--bg); }
+
+  .option-btn { border: 1.5px solid var(--line); background: #fff; transition: all .15s ease; }
+  .option-btn:hover { border-color: #c9c1f5; background: #fbfaff; }
+  .option-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 3px rgba(124,108,240,0.12);
+  }
+
+  .axis-card { border: 1.5px solid var(--line); background: #fbfaff; transition: all .15s ease; }
+  .axis-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .axis-card.level-高め { background: var(--accent-soft); border-color: #cabdf9; }
+  .axis-card.level-中くらい { background: #fbfaff; }
+  .axis-card.level-これから { background: #f6f5fb; }
+
+  .step-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--line); }
+  .step-dot.filled { background: var(--accent); }
+  .step-dot.current { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+
+  .purpose-btn {
+    border: 1.5px solid var(--line);
+    background: #fff;
+    transition: all .15s ease;
+  }
+  .purpose-btn:hover { border-color: #c9c1f5; background: #fbfaff; }
+  .purpose-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  #screen-question, #screen-result, #screen-start { max-width: 640px; margin: 0 auto; }
+
+  ::selection { background: var(--accent-soft); color: #4d3fb0; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+  <!-- HEADER -->
+  <header class="w-full py-3.5 px-5 border-b border-[var(--line)] bg-white/90 backdrop-blur sticky z-20" style="top: env(safe-area-inset-top, 0px);">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      <h1 class="text-sm sm:text-base font-bold tracking-tight flex items-center gap-2">
+        <svg width="22" height="22" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 10c-4 0-6 3-6 7s2 8 8 12c2 1.5 4 1.5 6 0 6-4 8-8 8-12s-2-7-6-7c-3 0-4 1.5-6 1.5S15 10 12 10z" fill="#7c6cf0"/>
+          <circle cx="15" cy="19" r="1.6" fill="#fff"/>
+          <circle cx="23" cy="19" r="1.6" fill="#fff"/>
+          <path d="M16 24c1.2 1 5.8 1 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        AIとの距離感チェック
+        <span class="text-[10px] px-2 py-0.5 rounded-full soft-pill font-semibold">v2.0 試作</span>
+      </h1>
+      <div class="flex items-center gap-2">
+        <button onclick="copySourceCode()" class="px-3 py-1.5 btn-ghost text-xs font-medium rounded-full transition-all flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+          <span id="source-copy-text" class="hidden sm:inline">コードをコピー</span>
+        </button>
+        <span class="hidden sm:inline text-xs text-[var(--sub)] font-medium">まかろにnote制作AIチーム</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="w-full px-4 py-8 flex-1 flex flex-col justify-center">
+
+    <!-- START SCREEN -->
+    <div id="screen-start" class="card p-7 sm:p-10 text-center fade-in">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl mb-5" style="background: linear-gradient(135deg, var(--accent-soft), var(--accent-2-soft));">
+        <svg width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 10c-4 0-6 3-6 7s2 8 8 12c2 1.5 4 1.5 6 0 6-4 8-8 8-12s-2-7-6-7c-3 0-4 1.5-6 1.5S15 10 12 10z" fill="#7c6cf0"/>
+          <circle cx="15" cy="19" r="1.6" fill="#fff"/>
+          <circle cx="23" cy="19" r="1.6" fill="#fff"/>
+          <path d="M16 24c1.2 1 5.8 1 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-black tracking-tight mb-2">
+        あなたのAIとの距離感チェック
+      </h2>
+      <p class="font-semibold text-sm sm:text-base mb-6" style="color: var(--accent);">
+        「AI初心者って、どこからなん？」
+      </p>
+      <div class="text-[var(--sub)] text-sm sm:text-base leading-relaxed space-y-3 mb-8 p-6 rounded-2xl text-left" style="background: var(--bg);">
+        <p>これはAIの知識量や使用時間を競う診断ではありません。</p>
+        <p>今、自分がAIとどんな距離にいるのか。</p>
+        <p class="font-bold" style="color: var(--ink);">ちょっと覗いてみませんか？</p>
+      </div>
+      <button onclick="startQuiz()" class="w-full sm:w-auto px-8 py-4 btn-primary font-bold rounded-2xl transition-all duration-200 text-base cursor-pointer">
+        診断してみる
+      </button>
+      <p class="mt-6 text-[11px] text-[var(--sub)] flex items-center justify-center gap-1.5">
+        案内役：まかろに
+      </p>
+    </div>
+
+    <!-- QUESTION SCREEN -->
+    <div id="screen-question" class="hidden card p-6 sm:p-10 fade-in">
+      <div class="mb-8">
+        <div class="flex justify-between items-center text-xs font-bold text-[var(--sub)] mb-2">
+          <span id="question-counter">Q1 / 9</span>
+          <span id="progress-percent">11%</span>
+        </div>
+        <div class="w-full h-2 rounded-full overflow-hidden" style="background: var(--line);">
+          <div id="progress-bar" class="h-full rounded-full transition-all duration-300" style="width: 11%; background: linear-gradient(90deg, #8b7cf6, #6f5be0);"></div>
+        </div>
+      </div>
+
+      <h3 id="question-text" class="text-xl sm:text-2xl font-bold mb-6 leading-snug"></h3>
+
+      <div id="options-container" class="space-y-3 mb-8"></div>
+
+      <div class="flex items-center justify-between pt-4 border-t border-[var(--line)]">
+        <button id="btn-prev" onclick="prevQuestion()" class="px-5 py-2.5 rounded-xl btn-ghost text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
+          戻る
+        </button>
+        <button id="btn-restart-q" onclick="confirmRestart()" class="text-xs text-[var(--sub)] hover:text-[var(--ink)] transition-colors">
+          やり直す
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="screen-result" class="hidden space-y-5 fade-in">
+
+      <!-- 1. 現在地 -->
+      <div class="card p-6 sm:p-9 text-center">
+        <span class="inline-block text-[11px] font-bold tracking-wider uppercase soft-pill px-3 py-1 rounded-full mb-4">今のあなたの現在地</span>
+        <div id="step-indicator" class="flex items-center justify-center gap-1.5 mb-5"></div>
+        <h3 class="text-xl sm:text-2xl font-black leading-relaxed whitespace-pre-line mb-3" id="result-title"></h3>
+        <p id="result-now-sentence" class="text-sm sm:text-base font-semibold mb-4" style="color: var(--accent);"></p>
+        <div id="result-description" class="text-[var(--sub)] text-sm sm:text-base leading-relaxed p-5 rounded-2xl text-left" style="background: var(--bg);"></div>
+      </div>
+
+      <!-- 2. 今できていること -->
+      <div class="card p-6 sm:p-8">
+        <h4 class="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-4">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg" style="background: var(--accent-soft);">✅</span>
+          今できていること
+        </h4>
+        <ul id="achievements-list" class="space-y-3"></ul>
+      </div>
+
+      <!-- 3. 5つの視点（詳細） -->
+      <div class="card p-6 sm:p-8">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg" style="background: var(--accent-soft);">🧭</span>
+            5つの視点（詳細）
+          </h4>
+          <span class="text-[11px] text-[var(--sub)]">タップで解説</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-2" id="axes-container"></div>
+        <div id="axis-explanation-box" class="text-xs text-[var(--sub)] p-3 rounded-xl mt-3 hidden" style="background: var(--bg); border: 1px solid var(--line);">
+          <span class="font-bold" style="color: var(--ink);" id="expl-title"></span>：<span id="expl-desc"></span>
+        </div>
+      </div>
+
+      <!-- 4. モニタリング（結果に対するアドバイス） -->
+      <div class="card p-6 sm:p-8">
+        <h4 class="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg" style="background: var(--accent-2-soft);">🔎</span>
+          モニタリング（意識してみるといいかも）
+        </h4>
+        <p class="text-xs text-[var(--sub)] mb-4">診断結果をふまえて、これから気にかけてみるといいポイントです。</p>
+        <ul id="monitoring-list" class="space-y-3"></ul>
+      </div>
+
+      <!-- 5. 次に試してみること -->
+      <div class="p-5 sm:p-6 rounded-2xl space-y-2" style="background: var(--accent-soft);">
+        <h4 class="text-xs font-bold uppercase tracking-wider" style="color: #4d3fb0;">次に試してみること</h4>
+        <p id="result-action" class="text-sm font-semibold leading-relaxed" style="color: #322a6b;"></p>
+      </div>
+
+      <!-- 6. 次の一歩を選んでみる（目的別アドバイス） -->
+      <div class="card p-5 sm:p-6 space-y-4">
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider mb-1" style="color: #4d3fb0;">次の一歩を選んでみる</h4>
+          <p class="text-xs text-[var(--sub)] leading-relaxed">「何がしたいか」を選ぶと、頼み方のヒントが変わります。AIに丸投げする前に、目的をはっきりさせるのが近道です。</p>
+        </div>
+        <div id="purpose-buttons" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        <div id="purpose-advice-box" class="hidden text-sm leading-relaxed p-4 rounded-xl" style="background: var(--bg);">
+          <span id="purpose-advice-text"></span>
+        </div>
+      </div>
+
+      <!-- 7. AI利用の心がけ（毎回固定表示） -->
+      <div class="p-4 sm:p-5 rounded-2xl text-xs sm:text-sm leading-relaxed" style="background: var(--warn-soft); border: 1px solid var(--warn-line); color: var(--warn);">
+        <span class="font-bold block mb-1">⚠️ AI利用にあたって</span>
+        <p>AIはあくまで補助的な存在です。回答には誤りが含まれることもあるため、内容をそのまま信じず、自分で判断することが最初のリスクヘッジです。</p>
+      </div>
+
+      <!-- Prototype Notice -->
+      <div class="p-4 rounded-2xl text-xs space-y-1" style="background: #f6f5fb; border: 1px solid var(--line); color: var(--sub);">
+        <span class="font-bold block" style="color: var(--ink);">これは試作版です。</span>
+        <p>「この結果なんか違う」「この質問わかりにくい」など、感じたこと自体が改善材料になります。</p>
+      </div>
+
+      <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <button onclick="startQuiz()" class="w-full sm:w-auto px-8 py-3.5 btn-primary font-bold rounded-2xl transition-all text-sm cursor-pointer">
+          もう一度やってみる
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="w-full py-6 text-center text-xs text-[var(--sub)] border-t border-[var(--line)] bg-white">
+    © まかろにnote制作AIチーム | AIとの距離感チェック v2.0（試作）
+  </footer>
+
+<script>
+  // ============================================================
+  // Question data & scoring logic: unchanged from Ver.1.0
+  // ============================================================
+  const questions = [
+    { id: 1, text: "AIを使ったことがありますか？", options: ["ある", "ない", "わからない"] },
+    { id: 2, text: "AIに何かを頼むとき、あなたはどれに近い？", options: ["とりあえず聞いてみる", "目的や条件を考えてから聞く", "何を頼めばいいかわからない"] },
+    { id: 3, text: "AIに文章・画像など、何かを「作ってもらった」ことがありますか？", options: ["ある", "ない", "わからない"] },
+    { id: 4, text: "AIの答えが「なんか違う」と思ったとき、どうしますか？", options: ["そのまま使う", "もう一度お願いする", "どう直せばいいかわからない"] },
+    { id: 5, text: "AIへの頼み方を変えると、答えが変わると感じたことがありますか？", options: ["ある", "ない", "わからない"] },
+    { id: 6, text: "AIの答えを見て「ほんまに？」と確認したことがありますか？", options: ["ある", "ない", "わからない"] },
+    { id: 7, text: "ChatGPTやGeminiなど、複数のAIを「目的によって使い分けた」ことがありますか？", options: ["ある", "ない", "わからない"] },
+    { id: 8, text: "「これ、AIにやってもらったら楽になるんちゃう？」と考えたことがありますか？", options: ["よくある", "たまにある", "ほとんどない"] },
+    { id: 9, text: "AIを、仕事や生活の中に組み込んで使ったことがありますか？", options: ["ある", "ない", "わからない"] }
+  ];
+
+  let currentQuestionIndex = 0;
+  let userAnswers = {};
+
+  const axisExplanations = {
+    '接点': 'AIにどのくらい触れているか、日常で存在を意識しているかを表します。',
+    '依頼': 'AIに自分の目的や要望を具体的に伝えてお願いできているかを表します。',
+    '対話': 'AIからの返事を見て、考えたり、もう一度頼み直したりしてやり取りできるかを表します。',
+    '活用': 'AIを自分の仕事や日々の生活の中に継続して取り入れられているかを表します。',
+    '主体性': '「AIに何を任せるか」「何を自分で判断するか」を自分で主体的に考えられているかを表します。'
+  };
+
+  const landscapeOrder = [
+    '① AIを知らない',
+    '② AIを知る',
+    '③ AIを選ぶ',
+    '④ AIに頼む',
+    '⑤ AIへの頼み方を覚える',
+    '⑥ AIを使い分ける',
+    '⑦ AIを仕事・生活に組み込む',
+    '⑧ AIとの付き合い方を自分で作る'
+  ];
+
+  function startQuiz() {
+    currentQuestionIndex = 0;
+    userAnswers = {};
+    document.getElementById('screen-start').classList.add('hidden');
+    document.getElementById('screen-result').classList.add('hidden');
+    document.getElementById('screen-question').classList.remove('hidden');
+    renderQuestion();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderQuestion() {
+    const q = questions[currentQuestionIndex];
+    document.getElementById('question-counter').innerText = `Q${currentQuestionIndex + 1} / ${questions.length}`;
+    const pct = Math.round(((currentQuestionIndex + 1) / questions.length) * 100);
+    document.getElementById('progress-percent').innerText = `${pct}%`;
+    document.getElementById('progress-bar').style.width = `${pct}%`;
+    document.getElementById('question-text').innerText = q.text;
+
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+
+    q.options.forEach((opt) => {
+      const isSelected = userAnswers[currentQuestionIndex] === opt;
+      const btn = document.createElement('button');
+      btn.className = `option-btn w-full text-left p-4 sm:p-5 rounded-2xl font-medium text-sm sm:text-base flex items-center justify-between cursor-pointer ${isSelected ? 'selected' : ''}`;
+      btn.innerHTML = `
+        <span>${opt}</span>
+        <span class="w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:${isSelected ? 'var(--accent)' : 'var(--line)'}; background:${isSelected ? 'var(--accent)' : 'transparent'};">
+          ${isSelected ? '<svg class="w-3 h-3" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+        </span>
+      `;
+      btn.onclick = () => selectOption(opt);
+      container.appendChild(btn);
+    });
+
+    document.getElementById('btn-prev').disabled = currentQuestionIndex === 0;
+  }
+
+  function selectOption(option) {
+    userAnswers[currentQuestionIndex] = option;
+    renderQuestion();
+    setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        currentQuestionIndex++;
+        renderQuestion();
+      } else {
+        calculateResult();
+      }
+    }, 250);
+  }
+
+  function prevQuestion() {
+    if (currentQuestionIndex > 0) {
+      currentQuestionIndex--;
+      renderQuestion();
+    }
+  }
+
+  function confirmRestart() {
+    if (confirm("最初からやり直しますか？")) {
+      startQuiz();
+    }
+  }
+
+  function showAxisExpl(axisName) {
+    const box = document.getElementById('axis-explanation-box');
+    document.getElementById('expl-title').innerText = axisName;
+    document.getElementById('expl-desc').innerText = axisExplanations[axisName] || '';
+    box.classList.remove('hidden');
+  }
+
+  // ============================================================
+  // Scoring / landscape logic: unchanged from Ver.1.0
+  // ============================================================
+  function computeDiagnosis() {
+    const a1 = userAnswers[0], a2 = userAnswers[1], a3 = userAnswers[2],
+          a4 = userAnswers[3], a5 = userAnswers[4], a6 = userAnswers[5],
+          a7 = userAnswers[6], a8 = userAnswers[7], a9 = userAnswers[8];
+
+    let contactScore = 'これから';
+    if (a1 === 'ある' || a3 === 'ある') contactScore = '中くらい';
+    if (a1 === 'ある' && a3 === 'ある') contactScore = '高め';
+
+    let requestScore = 'これから';
+    if (a2 === 'とりあえず聞いてみる' || a8 === 'たまにある') requestScore = '中くらい';
+    if (a2 === '目的や条件を考えてから聞く' || a8 === 'よくある') requestScore = '高め';
+
+    let dialogueScore = 'これから';
+    if (a4 === 'もう一度お願いする' || a5 === 'ある' || a6 === 'ある') dialogueScore = '中くらい';
+    if ((a4 === 'もう一度お願いする' && a5 === 'ある') || (a5 === 'ある' && a6 === 'ある')) dialogueScore = '高め';
+
+    let utilizationScore = 'これから';
+    if (a9 === 'ある') utilizationScore = '高め';
+    else if (a3 === 'ある' && a8 === 'よくある') utilizationScore = '中くらい';
+
+    let agencyScore = 'これから';
+    if (a8 === 'よくある' || a2 === '目的や条件を考えてから聞く') agencyScore = '中くらい';
+    if (a8 === 'よくある' && (a6 === 'ある' || a2 === '目的や条件を考えてから聞く')) agencyScore = '高め';
+
+    let landscape = '② AIを知る';
+
+    if (a1 === 'ない' && a3 === 'ない' && a9 === 'ない' && a8 !== 'よくある') {
+      landscape = '① AIを知らない';
+    }
+    else if (a9 === 'ある' && (a2 === '目的や条件を考えてから聞く' || a8 === 'よくある') && (a6 === 'ある' || a5 === 'ある')) {
+      landscape = '⑧ AIとの付き合い方を自分で作る';
+    }
+    else if (a9 === 'ある' && utilizationScore !== 'これから') {
+      landscape = '⑦ AIを仕事・生活に組み込む';
+    }
+    else if (a7 === 'ある' && !(a7 === 'ある' && a5 !== 'ある' && a2 !== '目的や条件を考えてから聞く') && dialogueScore !== 'これから') {
+      landscape = '⑥ AIを使い分ける';
+    }
+    else if (a4 === 'もう一度お願いする' && (a5 === 'ある' || a6 === 'ある')) {
+      landscape = '⑤ AIへの頼み方を覚える';
+    }
+    else if (a3 === 'ある' || a2 === 'とりあえず聞いてみる') {
+      landscape = '④ AIに頼む';
+    }
+    else if (a1 === 'ある' && a2 === 'とりあえず聞いてみる') {
+      landscape = '③ AIを選ぶ';
+    }
+    else if (a8 === 'よくある' && a1 !== 'ある') {
+      landscape = '③ AIを選ぶ';
+    }
+    else {
+      if (a1 === 'ない') landscape = '① AIを知らない';
+      else if (a3 === 'ある') landscape = '④ AIに頼む';
+      else landscape = '② AIを知る';
+    }
+
+    return {
+      answers: { a1, a2, a3, a4, a5, a6, a7, a8, a9 },
+      axes: { contact: contactScore, request: requestScore, dialogue: dialogueScore, utilization: utilizationScore, agency: agencyScore },
+      landscape
+    };
+  }
+
+  // 現在地の文章・説明・次の一歩（Ver.1.0の文言をベースに冒頭一文を追加）
+  const landscapeContent = {
+    '① AIを知らない': {
+      now: "AIとの接点そのものが、まだあまりない段階です。",
+      desc: "AIとの接点そのものがまだ薄い状態です。無理に使いこなそうとする必要はなく、日々のちょっとした調べものから気軽に扉を開いてみることができる段階です。",
+      action: "まずはAIに、日常の小さな疑問を1つ聞いてみる。",
+      monitoring: [
+        "身構えなくて大丈夫。まずは「検索の代わりに聞いてみる」くらいの気軽さで十分です。",
+        "思った答えが返ってこなくても、AIのせいでも自分のせいでもありません。焦らず慣れていきましょう。"
+      ]
+    },
+    '② AIを知る': {
+      now: "今はAIの存在を知り、少しずつ触り始めている段階です。",
+      desc: "AIの存在を知り、触り始めている状態です。まずは検索の延長としてAIに触れており、これからどんなことができるか面白さを探っていく景色です。",
+      action: "まずはAIに、身近な悩みや調べたいことを気軽に1つ話しかけてみる。",
+      monitoring: [
+        "最初は雑な聞き方でOK。まずは「何が返ってくるか」を楽しんでみましょう。",
+        "気になったAIの回答は、一度自分の言葉で言い換えてみると理解がぐっと深まります。"
+      ]
+    },
+    '③ AIを選ぶ': {
+      now: "今は「AIに何を頼めそうか」を探り始めている段階です。",
+      desc: "AIを使うだけでなく、「何をAIに頼むか」を意識し始めた状態です。自分の日常のどの部分でAIが役に立ちそうか、アンテナが少しずつ広がっています。",
+      action: "「こんなこと頼めるかな？」と思う日常のタスクを1つ、AIに投げかけてみる。",
+      monitoring: [
+        "「これ、AIに聞けるかな？」と思った瞬間をメモしておくと、頼めることのパターンが見えてきます。",
+        "うまくいかなかった質問も、「なぜ思った答えと違ったか」を振り返ると次に活きます。"
+      ]
+    },
+    '④ AIに頼む': {
+      now: "今はAIに目的を伝えて、具体的に頼めるようになっている段階です。",
+      desc: "自分の目的ややりたいことをAIに依頼できるようになっています。文章の作成やアイデア出しなど、具体的なアウトプットをAIから引き出せています。",
+      action: "AIから返ってきた答えに対して、もう少し具体的な条件を足してお願いし直してみる。",
+      monitoring: [
+        "同じお願いでも、条件を1つ足すだけで答えが変わることを、意識して試してみましょう。",
+        "AIの答えをそのまま使う前に、「これは本当に自分の意図と合っているか」を一度確認する癖をつけると安心です。"
+      ]
+    },
+    '⑤ AIへの頼み方を覚える': {
+      now: "今はAIとのやり取りの中で、頼み方のコツをつかみ始めている段階です。",
+      desc: "AIの回答を見ながら、自分の指示を微調整したり対話したりするコツを掴み始めている状態です。答えが違ったときに、どう伝えればいいかを試行錯誤できています。",
+      action: "同じ質問でも、頼み方や条件を変えると答えがどう変わるか試してみる。",
+      monitoring: [
+        "「なんか違う」と感じたときこそ、頼み方を変えるチャンスです。違和感の正体を言葉にしてみましょう。",
+        "AIとのやり取りを1往復で終わらせず、2〜3回対話してみると答えの精度が上がっていきます。"
+      ]
+    },
+    '⑥ AIを使い分ける': {
+      now: "今は目的に合わせて、複数のAIを使い分け始めている段階です。",
+      desc: "単に複数のAIツールを触っているだけでなく、自分の目的に合わせて「どれを使うか」を選び分けている状態です。ツールごとの特徴や強みを理解し始めています。",
+      action: "今の目的に対して、別のAIツールならどう答えるか比較してみる。",
+      monitoring: [
+        "同じ質問を複数のAIに投げて答えを見比べると、それぞれの得意分野が見えてきます。",
+        "「このAIはこういう時に強い」という自分なりのメモを残しておくと、次から迷わず選べます。"
+      ]
+    },
+    '⑦ AIを仕事・生活に組み込む': {
+      now: "今はAIを仕事や生活の中に、継続的な仲間として置けている段階です。",
+      desc: "AIを自分の仕事や生活の中に継続的に置いて使えている状態です。ルーティンや日々の作業の中で、AIが自然なパートナーとして馴染んでいます。",
+      action: "今使っているAIの仕事を1つだけ、『AIに任せる部分』と『自分で判断する部分』に分けてみる。",
+      monitoring: [
+        "AIに任せている作業を、たまに自分の目でチェックする習慣を持っておくと安心です。",
+        "「これはAIに任せて大丈夫」「これは自分で見るべき」という線引きを、定期的に見直してみましょう。"
+      ]
+    },
+    '⑧ AIとの付き合い方を自分で作る': {
+      now: "今はAIとの付き合い方そのものを、自分でデザインできている段階です。",
+      desc: "AIとの付き合い方を自分で主体的にデザインできている状態です。AIに何を任せ、何を自分で判断するかを自分の目的に合わせて明確にコントロールできています。",
+      action: "AIに任せること・自分が判断することを1つずつ整理して、自分なりの役割分担を作ってみる。",
+      monitoring: [
+        "自分の役割分担のルールを、たまに言語化して見直すと、さらに使い方が磨かれていきます。",
+        "AIに頼りすぎていないか、逆に頼れる部分を頼れていないか、両方の視点で振り返ってみましょう。"
+      ]
+    }
+  };
+
+  // 「今できていること」：回答の言い換えではなく、その行動が持つ意味・価値を添えて具体化
+  function buildAchievements(a) {
+    const items = [];
+
+    if (a.a1 === 'ある') {
+      items.push('AIに触れた経験がゼロではない。使う前の心理的ハードルはすでに越えています。');
+    }
+    if (a.a3 === 'ある') {
+      items.push('文章や画像など、何かをゼロから生み出してもらう体験をしている。「AIに作らせる」という発想の土台があります。');
+    }
+    if (a.a2 === '目的や条件を考えてから聞く') {
+      items.push('ただ質問するだけでなく、目的や条件を整理してから頼めている。答えの質を左右する重要な習慣です。');
+    } else if (a.a2 === 'とりあえず聞いてみる') {
+      items.push('まず聞いてみる、というフットワークの軽さがある。これは使い続ける上で強みになります。');
+    }
+    if (a.a4 === 'もう一度お願いする') {
+      items.push('一発の回答で終わらせず、違うと感じたら聞き直す粘り強さがある。対話型AIを使いこなす上で欠かせない姿勢です。');
+    }
+    if (a.a5 === 'ある') {
+      items.push('頼み方次第で答えが変わることに、すでに気づいている。「プロンプトを工夫する」という発想の入り口に立っています。');
+    }
+    if (a.a6 === 'ある') {
+      items.push('AIの回答を鵜呑みにせず、事実確認する視点を持っている。AI活用で最も重要なリスク回避の行動です。');
+    }
+    if (a.a7 === 'ある') {
+      items.push('複数のAIツールを、目的に応じて使い分けた経験がある。ツールごとの特性を比較する視点があります。');
+    }
+    if (a.a8 === 'よくある') {
+      items.push('日常業務の中で「これAIに任せられそう」と気づくアンテナが、かなり立っている状態です。');
+    } else if (a.a8 === 'たまにある') {
+      items.push('日常業務の中で「これAIに任せられそう」と気づく瞬間が、すでに生まれ始めています。');
+    }
+    if (a.a9 === 'ある') {
+      items.push('単発の利用で終わらず、仕事や生活の中に定着させている。継続利用のハードルをすでに超えています。');
+    }
+
+    if (items.length === 0) {
+      items.push('今回の回答からは、まだ大きな行動が見えていません。ここからが本番です。AIに触れること自体が、これからの一歩になります。');
+    }
+    return items;
+  }
+
+  function axisIcon(name) {
+    const icons = { '接点': '🔗', '依頼': '💬', '対話': '🔄', '活用': '🛠️', '主体性': '🧭' };
+    return icons[name] || '✦';
+  }
+
+  function renderStepIndicator(landscape) {
+    const el = document.getElementById('step-indicator');
+    el.innerHTML = '';
+    const currentIndex = landscapeOrder.indexOf(landscape);
+    landscapeOrder.forEach((_, i) => {
+      const dot = document.createElement('span');
+      let cls = 'step-dot';
+      if (i === currentIndex) cls += ' current';
+      else if (i < currentIndex) cls += ' filled';
+      dot.className = cls;
+      el.appendChild(dot);
+    });
+  }
+
+  // ============================================================
+  // 次の一歩を選んでみる（目的別アドバイス）
+  // ============================================================
+  const purposeAdvice = {
+    '情報を調べたい・知りたい': "調べたいことに加えて「何のために知りたいか」「誰向けの情報か」を一言添えると、AIが的を絞った答えを返しやすくなります。「初心者向けに」「30秒で説明できるくらい簡潔に」など、受け取り手や粒度を伝えるのがコツです。",
+    '文章やアイデアを作りたい': "作りたいものの目的・読み手・トーン（丁寧／カジュアルなど）の3つを伝えると、1回目からイメージに近づきます。1回で満足せず「もう少しやわらかく」のように、微調整のやり取りを重ねるのがおすすめです。",
+    '任せられる作業を見つけたい': "まずは今やっている作業を書き出し、「判断が必要な部分」と「手順が決まっている部分」に分けてみましょう。手順が決まっている部分から、AIに一部を任せてみるのが始めやすいです。",
+    '今の使い方をもっと良くしたい': "直近でAIに聞いた内容を1つ思い出し、「もし目的や条件を先に伝えていたら、答えはどう変わっていたか」を想像してみると、次の頼み方のヒントが見つかります。"
+  };
+
+  function renderPurposeButtons() {
+    const container = document.getElementById('purpose-buttons');
+    container.innerHTML = '';
+    Object.keys(purposeAdvice).forEach(purpose => {
+      const btn = document.createElement('button');
+      btn.className = 'purpose-btn text-left px-4 py-3 rounded-xl text-sm cursor-pointer';
+      btn.innerText = purpose;
+      btn.onclick = () => selectPurpose(purpose, btn);
+      container.appendChild(btn);
+    });
+  }
+
+  function selectPurpose(purpose, btnEl) {
+    document.querySelectorAll('#purpose-buttons .purpose-btn').forEach(b => b.classList.remove('selected'));
+    btnEl.classList.add('selected');
+    const box = document.getElementById('purpose-advice-box');
+    document.getElementById('purpose-advice-text').innerText = purposeAdvice[purpose];
+    box.classList.remove('hidden');
+  }
+
+  function calculateResult() {
+    const diagnosis = computeDiagnosis();
+    const { answers, axes, landscape } = diagnosis;
+    const content = landscapeContent[landscape];
+
+    const titleText = `あなたは「${landscape}」の\n景色に近いようです。`;
+
+    document.getElementById('screen-question').classList.add('hidden');
+    document.getElementById('screen-result').classList.remove('hidden');
+
+    renderStepIndicator(landscape);
+    document.getElementById('result-title').innerText = titleText;
+    document.getElementById('result-now-sentence').innerText = content.now;
+    document.getElementById('result-description').innerHTML = `<p>${content.desc}</p>`;
+    document.getElementById('result-action').innerText = content.action;
+
+    // 今できていること
+    const achievementsList = document.getElementById('achievements-list');
+    achievementsList.innerHTML = '';
+    buildAchievements(answers).forEach(text => {
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2.5 text-sm sm:text-base leading-relaxed';
+      li.innerHTML = `<span class="flex-shrink-0 mt-0.5" style="color: var(--accent);">●</span><span>${text}</span>`;
+      achievementsList.appendChild(li);
+    });
+
+    // モニタリング（アドバイス）
+    const monitoringList = document.getElementById('monitoring-list');
+    monitoringList.innerHTML = '';
+    content.monitoring.forEach(text => {
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2.5 text-sm sm:text-base leading-relaxed';
+      li.innerHTML = `<span class="flex-shrink-0 mt-0.5" style="color: var(--accent-2);">→</span><span>${text}</span>`;
+      monitoringList.appendChild(li);
+    });
+
+    // 5つの視点
+    const axesContainer = document.getElementById('axes-container');
+    axesContainer.innerHTML = '';
+    const axesData = [
+      { name: '接点', val: axes.contact },
+      { name: '依頼', val: axes.request },
+      { name: '対話', val: axes.dialogue },
+      { name: '活用', val: axes.utilization },
+      { name: '主体性', val: axes.agency }
+    ];
+    axesData.forEach(axis => {
+      const card = document.createElement('div');
+      card.className = `axis-card level-${axis.val} p-3 rounded-2xl text-center flex flex-col items-center gap-1 cursor-pointer`;
+      card.innerHTML = `
+        <span class="text-base">${axisIcon(axis.name)}</span>
+        <span class="text-xs font-bold">${axis.name}</span>
+        <span class="text-xs sm:text-sm">${axis.val}</span>
+      `;
+      card.onclick = () => showAxisExpl(axis.name);
+      card.onmouseenter = () => showAxisExpl(axis.name);
+      axesContainer.appendChild(card);
+    });
+    document.getElementById('axis-explanation-box').classList.add('hidden');
+
+    // 次の一歩（目的別アドバイス）をリセットして再描画
+    renderPurposeButtons();
+    document.getElementById('purpose-advice-box').classList.add('hidden');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ============================================================
+  // Copy helpers（ソースコードコピーのみ）
+  // ============================================================
+  function copySourceCode() {
+    const codeText = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const btnText = document.getElementById('source-copy-text');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(codeText).then(() => {
+        showSourceCopiedFeedback(btnText);
+      }).catch(() => fallbackCopySourceText(codeText, btnText));
+    } else {
+      fallbackCopySourceText(codeText, btnText);
+    }
+  }
+
+  function fallbackCopySourceText(text, btnTextElement) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) showSourceCopiedFeedback(btnTextElement);
+      else alert('コードのコピーに失敗しました。');
+    } catch (err) {
+      alert('コードのコピーに失敗しました。');
+    }
+    document.body.removeChild(textArea);
+  }
+
+  function showSourceCopiedFeedback(element) {
+    const originalText = element.innerText;
+    element.innerText = "全コードコピー完了！";
+    setTimeout(() => { element.innerText = originalText; }, 2000);
+  }
+</script>
+</body>
+</html>
